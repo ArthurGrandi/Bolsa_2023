@@ -1,4 +1,3 @@
-#include <Adafruit_BME280.h>
 #include <DHT.h>
 #include <HTTP_Method.h>
 #include <Uri.h>
@@ -7,32 +6,23 @@
 #include <Adafruit_Sensor.h>
 #include <HTTPClient.h>
 #include <ThingsBoard.h>
-#include <Wire.h>
-#include <SPI.h>
 
 #define ssid "VISITANTES"
 #define password ""
 
-#define SEALEVELPRESSURE_HPA (1013.25)
-
-#define I2C_SCL 22
-#define I2C_SDA 21
-
-#define DHTPIN 25
+#define DHTPIN 32
 #define DHTTYPE DHT11
-
-Adafruit_BME280 bme; // Sensor BME280
 
 const int PIN1 = 2;  // Reed Switch Pin
 const int PIN2 = 4;  // Reed Switch Pin
 const int PIN3 = 5;  // Reed Switch Pin
 const int PIN4 = 18;  // Reed Switch Pin
 const int PIN5 = 19;  // Reed Switch Pin
-const int PIN6 = 34;  // Reed Switch Pin
-const int PIN7 = 35;  // Reed Switch Pin
-const int PIN8 = 32;  // Reed Switch Pin
+const int PIN6 = 21;  // Reed Switch Pin
+const int PIN7 = 22;  // Reed Switch Pin
+const int PIN8 = 34;  // Reed Switch Pin
 const int PLUVIPIN = 23;  // Reed Switch Pin
-const int ANEMPIN = 33;  // Reed Switch Pin
+const int ANEMPIN = 35;  // Reed Switch Pin
 
 const char* thingsboardServer = "http://tb.geati.camboriu.ifc.edu.br/";
 const char* accessToken = "f5a3iEEZ2iPhdIoVewTk";
@@ -42,8 +32,6 @@ DHT dht(DHTPIN, DHTTYPE);
 float h;
 float t;
 float hic = dht.computeHeatIndex(t, h, false);
-float altitude;
-float pressao;
 
 String direcao = "erro"; // Variável para armazenar a direção
 
@@ -77,26 +65,23 @@ void setup() {
   pinMode(DHTPIN, INPUT);  // Set pin as INPUT
   attachInterrupt(23, pluvi, CHANGE);  // Associa interrupção ao pino 2
 
-if (!bme.begin(0x76)) {
-    Serial.println("Não foi possível encontrar um sensor BME280, verifique a conexão!");
-    while (1);
-}
+  dht.begin();
 
-WiFi.mode(WIFI_STA);
-Serial.println("Conectando a Rede: "); //Imprime na serial a mensagem
-Serial.println(ssid); //Imprime na serial o nome da Rede Wi-Fi
-WiFi.begin(ssid, password);
+  WiFi.mode(WIFI_STA);
+  Serial.println("Conectando a Rede: "); //Imprime na serial a mensagem
+  Serial.println(ssid); //Imprime na serial o nome da Rede Wi-Fi
+  WiFi.begin(ssid, password);
 
-while (WiFi.status() != WL_CONNECTED) {
-  delay(500);
-  Serial.print(".");
-}
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
 
-Serial.println("");
-Serial.println("WiFi Conectado");
-Serial.print("IP: ");
-Serial.println(WiFi.localIP());
-Serial.println("");
+  Serial.println("");
+  Serial.println("WiFi Conectado");
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP());
+  Serial.println("");
 }
 
 void loop() {
@@ -106,8 +91,7 @@ void loop() {
   anem();
   Serial.println("DHT");
   sensorDHT();
-  Serial.println("BME");
-  sensorBME();
+
 
   Serial.print("Direção: ");
   Serial.println(direcao);
@@ -129,18 +113,12 @@ void loop() {
   Serial.print("Calor: ");
   Serial.print(hic);
   Serial.println("°C ");
-  Serial.print("Pressão atmosférica: ");
-  Serial.print(pressao);
-  Serial.println(" hPa");
-  Serial.print("Altitude aproximada: ");
-  Serial.print(altitude);
-  Serial.println("m");
   Serial.println("--------------------");
 
   delay(1000);  // Wait for 1 second
 
   // Crie uma mensagem JSON com os dados do sensor
-  String payload = "{\"temperatura\":" + String(t) + ",\"humidade\":" + String(h) + ",\"calor\":" + String(hic) + ",\"pressao\":\"" + pressao + ",\"altitude\":\"" + altitude + ",\"direcao\":\"" + direcao + "\",\"velocidade do vento\":" + String(speedwind) + ",\"milimetros de chuva\":" + String(mm) + "}";
+  String payload = "{\"temperatura\":" + String(t) + ",\"humidade\":" + String(h) + ",\"calor\":" + String(hic) + ",\"direcao\":\"" + direcao + "\",\"velocidade do vento\":" + String(speedwind) + ",\"milimetros de chuva\":" + String(mm) + "}";
 
   String url = String(thingsboardServer) + "/api/v1/" + accessToken + "/telemetry";  // Crie a URL para enviar os dados para o ThingsBoar
 
@@ -246,9 +224,4 @@ void sensorDHT(){
   h = dht.readHumidity();
   t = dht.readTemperature();
   hic = dht.computeHeatIndex(t, h, false);
-}
-
-void sensorBME(){
-  pressao = bme.readPressure() / 100.0F;
-  altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
 }
